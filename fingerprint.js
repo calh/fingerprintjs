@@ -5,6 +5,9 @@
 * Licensed under the MIT (http://www.opensource.org/licenses/mit-license.php) license.
 */
 
+// global container for flash callbacks
+var __global_fingerprints = {};
+
 ;(function (name, context, definition) {
   if (typeof module !== 'undefined' && module.exports) { module.exports = definition(); }
   else if (typeof define === 'function' && define.amd) { define(definition); }
@@ -47,19 +50,50 @@
       });
       return results;
     };
-
+    /* Find my own directory */
+    this.myDirectory = function() {
+      var scripts = document.getElementsByTagName("script");
+      for( var i = 0 ; i < scripts.length ; i++ )
+      {
+        if ( scripts[i].src.match(/fingerprint\.js/) )
+        {
+          var script = scripts[i].src;
+          return script.substring(0, script.lastIndexOf('/'));
+        }
+      }
+    }
     if (typeof options == 'object'){
       this.hasher = options.hasher;
       this.screen_resolution = options.screen_resolution;
       this.canvas = options.canvas;
       this.ie_activex = options.ie_activex;
+      if ( typeof options.flash != 'undefined' )
+      {
+        this.flashParameters(options.flash);
+        /* store this instance in the global namespace
+         * so Flash can access it when loaded
+         */
+        __global_fingerprints[this.flash.id] = this;
+        // trigger loading the flash app
+        this.loadSwf();
+      }
     } else if(typeof options == 'function'){
       this.hasher = options;
     }
   };
 
   Fingerprint.prototype = {
-    get: function(){
+    get: function(callback) {
+      if ( typeof callback != 'undefined') 
+        if ( this.flash )
+          this.callback = callback;
+        else  // so the callback API also works without flash...
+          callback( this.computeHash() );
+      else
+        return this.computeHash();
+
+    },
+    computeHash: function(){
       var keys = [];
       keys.push(navigator.userAgent);
       keys.push(navigator.language);
@@ -87,6 +121,10 @@
       keys.push(this.getPluginsString());
       if(this.canvas && this.isCanvasSupported()){
         keys.push(this.getCanvasFingerprint());
+      }
+      if( this.flash )
+      {
+        keys.push(this.font_list);
       }
       if(this.hasher){
         return this.hasher(keys.join('###'), 31);
@@ -190,7 +228,6 @@
       }
       return false;
     },
-
     getPluginsString: function () {
       if(this.isIE()){
         return this.getIEPluginsString();
@@ -237,6 +274,12 @@
         return ""; // behavior prior version 0.5.0, not breaking backwards compat.
       }
     },
+    hasPlugin: function(name) {
+      var plugins = this.getPluginsString();
+      if ( typeof( plugins ) == 'string' && plugins.match(name) )
+        return true;
+      return false;
+    },
 
     getScreenResolution: function () {
       return [screen.height, screen.width];
@@ -257,7 +300,41 @@
       ctx.fillStyle = "rgba(102, 204, 0, 0.7)";
       ctx.fillText(txt, 4, 17);
       return canvas.toDataURL();
+    },
+
+    flashParameters: function(options) {
+      if ( typeof options == 'boolean' && options == true )
+      {
+        // load default values
+        this.flash = {};
+        this.flash.id = 'fingerprint-js-flash';
+        this.flash.swf = this.myDirectory() + '/flash/FontList.swf';
+        this.addFlashDiv();
+      }
+      else
+        this.flash = options;
+    },
+    addFlashDiv: function() {
+      var node = document.createElement('div');
+      node.setAttribute("id", this.flash.id);
+      node.setAttribute("style", "'width': 1px; height: 1px;");
+      document.body.appendChild(node);
+    },
+    loadSwf: function() {
+      if ( ! this.hasPlugin(/flash/i) )
+        return undefined;
+      var flashvars = { onReady: "__global_fingerprints['" + this.flash.id + "'].swfReady", swfObjectId: this.flash.id };
+      var params = { allowScriptAccess: "always", menu: "false" };
+      var attributes = { 'id': this.flash.id, name: this.flash.id };
+      swfobject.embedSWF(this.flash.swf, this.flash.id, "1", "1", "9.0.0", false, flashvars, params, attributes); 
+    },
+    swfReady: function(id) {
+      var swfElement = document.getElementById(id);
+      this.font_list = swfElement.fonts().join(";");
+      var hash = this.computeHash();
+      this.callback(hash);
     }
+
   };
 
 
