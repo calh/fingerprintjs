@@ -2,6 +2,8 @@
 
 [![Build Status](https://travis-ci.org/Valve/fingerprintjs.png)](https://travis-ci.org/Valve/fingerprintjs)
 
+#### Forked from [Valve's fingerprintjs](https://github.com/Valve/fingerprintjs) 
+
 Fast browser fingerprint library. Written in pure JavaScript, no dependencies. 
 By default uses [Murmur hashing][murmur] and returns a 32bit integer number.
 Hashing function can be easily replaced.
@@ -89,7 +91,33 @@ If you want to use the screen resolution in calculating the fingerprint,  pass t
 ```javascript
 var fingerprint = new Fingerprint({screen_resolution: true}).get();
 ```
+###  Flash Support
 
+To enable Flash support, simply add a `flash: true` option, and then alter the `get()` call 
+to use a callback function:
+
+```javascript
+new Fingerprint({flash: true}).get( function(fingerprint) {
+            $('#fingerprint').append(fingerprint); 
+});
+```
+
+(Since the Flash plugin takes a second or so to load, a callback function is necessary)
+
+All of the parameters for calling the Flash app are automatically detected or autocreated.  
+Pass an Object in as the `flash` parameter 
+to add a little more control based on your environment:
+
+```javascript
+new Fingerprint({flash: {
+      'id': 'myFlashDiv',
+      'swf': '/path/to/FontList.swf',
+    }}).get( function(fingerprint) {
+            $('#fingerprint').append(fingerprint); 
+});
+```
+
+Read the /flash/README file if you wish to alter and recompile the Flash app.
 
 ### IE 6, IE 7, IE 8, IE 9, IE 10, IE 11
 
