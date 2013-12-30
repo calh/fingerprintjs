@@ -93,8 +93,21 @@ var fingerprint = new Fingerprint({screen_resolution: true}).get();
 ```
 ###  Flash Support
 
-To enable Flash support, simply add a `flash: true` option, and then alter the `get()` call 
-to use a callback function:
+According to the [EFF Fingerprinting research document](https://panopticlick.eff.org/browser-uniqueness.pdf), the list of fonts in a browser are a source of 17.1 bits of entropy in uniquely identifying a browser.  The downside to this, is that it requires either Flash or Java to see this list.  (Easily)  Java support hasn't been added since Flash is more widely supported, and less intrusive on the user experience.
+
+To enable Flash support, alter your code based on these steps:
+
+* Add jQuery and SWFObject dependencies
+* Add a `flash: true` option to the Fingerprint instance
+* Alter the `get()` call to use a callback function
+
+```html
+<head>
+  <script src='//ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js'></script> 
+  <script src='//ajax.googleapis.com/ajax/libs/swfobject/2.2/swfobject.js'></script>
+  <script src='/fingerprintjs/fingerprint.js'></script>
+</head>
+```
 
 ```javascript
 new Fingerprint({flash: true}).get( function(fingerprint) {
@@ -117,7 +130,9 @@ new Fingerprint({flash: {
 });
 ```
 
-Read the /flash/README file if you wish to alter and recompile the Flash app.
+Read the /flash/README file if you wish to alter and recompile the Flash app.  If the font list
+is detected successfully, the entire string is added to the parameters of the hashing function. 
+(Note that the Flash app does not sort the list, which gives a slight extra bit of entropy)
 
 ### IE 6, IE 7, IE 8, IE 9, IE 10, IE 11
 
